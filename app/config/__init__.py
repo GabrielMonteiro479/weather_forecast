@@ -28,6 +28,3 @@ class ServiceConfig(object):
         return (response, response_dict)
         #print(response_object)
         #return response_object
-
-
-    #@classmethod
