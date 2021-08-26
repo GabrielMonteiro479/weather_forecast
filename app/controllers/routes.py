@@ -1,11 +1,16 @@
 from app import app
 from app.cache import DatabaseManager
 from app.config import ServiceConfig
+from flask import jsonify
 import requests, json
 import requests_cache
+import time
 
+five_minutes = 60       # 5 minutes = 300 seconds
 all_responses = []
 all_responses_dict = []
+start_time = int(time.time())
+end_time = start_time + five_minutes # 5 minutes after start time
 
 @app.route("/")
 def index():
@@ -31,6 +36,9 @@ def get_cities_max_number(max_number):
 @app.route('/weather/<city_name>', methods=['GET'])
 
 def get_city_by_name(city_name):
+    global start_time
+    global end_time
+    global all_responses_dict
     ServiceConfig.get_city(city_name)
     COMPLETE_URL = ServiceConfig.generate_complete_url()
 
@@ -38,20 +46,21 @@ def get_city_by_name(city_name):
 
     #HTTP requests
     response, response_dict = ServiceConfig.generate_json_object(COMPLETE_URL)
-    all_responses.append(response)
-    all_responses_dict.append(response_dict)
+    #print(response)
+    #all_responses.append(response)
+    #all_responses_dict.append(response_dict)
 
-    all_responses_len = len(all_responses)
+    #all_responses_len = len(all_responses)
 
-    count = 0
+    #count = 0
     #for i in reversed(range(all_responses_len)):
-    while count < 5:
-        if (all_responses_len - count - 1) >= 0:
-            if all_responses[all_responses_len - count - 1].from_cache:
+    #while count < 5:
+        #if (all_responses_len - count - 1) >= 0:
+            #if all_responses[all_responses_len - count - 1].from_cache:
             #if all_responses[i].from_cache:
-                print(all_responses_dict[all_responses_len-count-1])
-        print(all_responses_len)
-        count += 1
+                #print(all_responses_dict[all_responses_len-count-1])
+        #print(all_responses_len)
+        #count += 1
 
         #if i < all_responses_len - 5:
         #    return
@@ -82,13 +91,38 @@ def get_city_by_name(city_name):
         sql = "SELECT value FROM responses"
         query = DatabaseManager.Select(conn, sql)
 
+
         #for result in query:
             #print(result)
+            #print(result.find('{"coord":'))
+
+        #print("\n\n\n\n\n\n\n")
+        #byte_result = result[0]
+        #string_result = str(byte_result)
+        #x = string_result.strip('\\')
+        #print(x)
+
+
 
         conn.close()
 
+
         if response.from_cache:
             print("%s returned from cache" % response_dict["name"])
+            for i in all_responses_dict:
+                print(i)
+                print("\n")
+            return(jsonify(all_responses_dict))
         else:
+            all_responses_dict.append(response_dict)
+
             print("%s fetched from the Open Weather API... Caching it..." % response_dict["name"])
-        return (response_dict)
+
+        # Cache lives for 5 minutes and then it is deleted
+        if (end_time <= int(time.time())):
+            start_time = end_time
+            end_time = start_time + five_minutes
+            all_responses_dict = []
+
+        #return (response_dict)
+        return("%s fetched from the Open Weather API... Caching it..." % response_dict["name"])
