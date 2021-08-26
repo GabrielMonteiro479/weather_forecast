@@ -12,6 +12,6 @@ env = 'dev'
 
 app = create_app(env)
 #app.config.from_object('config')
-requests_cache.install_cache('app/cache/weather_forecast_cache', backend='sqlite', expire_after= 30, allowable_methods=('GET')) #300 = 5 minutes
+requests_cache.install_cache('app/cache/weather_forecast_cache', backend='sqlite', expire_after= 300, allowable_methods=('GET')) #300 = 5 minutes
 
 from app.controllers import routes

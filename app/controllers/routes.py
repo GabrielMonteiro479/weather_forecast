@@ -6,7 +6,7 @@ import requests, json
 import requests_cache
 import time
 
-five_minutes = 60       # 5 minutes = 300 seconds
+five_minutes = 300       # 5 minutes = 300 seconds
 all_responses = []
 all_responses_dict = []
 start_time = int(time.time())
@@ -16,7 +16,7 @@ end_time = start_time + five_minutes # 5 minutes after start time
 def index():
     return("WEATHER FORECAST")
 
-@app.route('/weather?max=<max_number>', methods=['GET'])
+@app.route('/weather/max=<max_number>', methods=['GET'])
 # implementar a funcao
 def get_cities_max_number(max_number):
     print(max_number)
