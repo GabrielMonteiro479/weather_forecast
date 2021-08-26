@@ -23,6 +23,7 @@ class ServiceConfig(object):
     @classmethod
     def generate_json_object(self, COMPLETE_URL):
         response = requests.get(COMPLETE_URL)
+        #print(response)
         response_dict = response.json()
         #response_object = jsonify(response_dict)
         return (response, response_dict)

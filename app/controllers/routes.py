@@ -1,14 +1,16 @@
 from app import app
-from app.cache import DatabaseManager
+from app.cache import DatabaseManager, Cache
 from app.config import ServiceConfig
 from flask import jsonify
 import requests, json
 import requests_cache
 import time
 
-five_minutes = 300       # 5 minutes = 300 seconds
-all_responses = []
+five_minutes = 30     # 5 minutes = 300 seconds
+
+cache_dict = {}
 all_responses_dict = []
+living_cache = []
 start_time = int(time.time())
 end_time = start_time + five_minutes # 5 minutes after start time
 
@@ -39,33 +41,18 @@ def get_city_by_name(city_name):
     global start_time
     global end_time
     global all_responses_dict
+    global living_cache
+    global cache_dict
+
     ServiceConfig.get_city(city_name)
     COMPLETE_URL = ServiceConfig.generate_complete_url()
 
-    #print(COMPLETE_URL)
 
     #HTTP requests
     response, response_dict = ServiceConfig.generate_json_object(COMPLETE_URL)
-    #print(response)
-    #all_responses.append(response)
-    #all_responses_dict.append(response_dict)
 
-    #all_responses_len = len(all_responses)
+    cache = Cache(response_dict)
 
-    #count = 0
-    #for i in reversed(range(all_responses_len)):
-    #while count < 5:
-        #if (all_responses_len - count - 1) >= 0:
-            #if all_responses[all_responses_len - count - 1].from_cache:
-            #if all_responses[i].from_cache:
-                #print(all_responses_dict[all_responses_len-count-1])
-        #print(all_responses_len)
-        #count += 1
-
-        #if i < all_responses_len - 5:
-        #    return
-
-    #aux = json.loads(response_dict)
     #Checking if the city is known
     if response_dict['cod'] != 200:
         return ('City Not Found, Error %s' % response_dict['cod'])
@@ -82,47 +69,36 @@ def get_city_by_name(city_name):
         print(current_temperature_celsius)
         print(current_description)
 
-        conn = DatabaseManager.DatabaseConn()
-
-        #print(conn)
-
-        #chamar o Select
-
-        sql = "SELECT value FROM responses"
-        query = DatabaseManager.Select(conn, sql)
+#------------------------------------------------------------------------------------------------------------------------------
+# TRYING WITH SQL
+        #conn = DatabaseManager.DatabaseConn()
 
 
-        #for result in query:
-            #print(result)
-            #print(result.find('{"coord":'))
-
-        #print("\n\n\n\n\n\n\n")
-        #byte_result = result[0]
-        #string_result = str(byte_result)
-        #x = string_result.strip('\\')
-        #print(x)
-
-
-
-        conn.close()
-
+        #sql = "SELECT value FROM responses"
+        #query = DatabaseManager.Select(conn, sql)
+#------------------------------------------------------------------------------------------------------------------------------
 
         if response.from_cache:
-            print("%s returned from cache" % response_dict["name"])
-            for i in all_responses_dict:
-                print(i)
-                print("\n")
-            return(jsonify(all_responses_dict))
-        else:
-            all_responses_dict.append(response_dict)
 
+            #Returning and printing from Cache as json
+            print("%s returned from cache" % response_dict["name"])
+
+            aux = cache.SearchCache(living_cache, response_dict["name"])
+            print(aux)
+            json_cache = cache.PrintCache(living_cache)
+            return(json_cache)
+
+        else:
             print("%s fetched from the Open Weather API... Caching it..." % response_dict["name"])
 
-        # Cache lives for 5 minutes and then it is deleted
-        if (end_time <= int(time.time())):
-            start_time = end_time
-            end_time = start_time + five_minutes
-            all_responses_dict = []
+            # Cache lives for 5 minutes and then it is deleted
+            if (end_time <= int(time.time())):
+                #print("DELETING CACHE")
+                start_time = end_time
+                end_time = start_time + five_minutes
+                living_cache = cache.DeleteCache(all_responses_dict)
 
-        #return (response_dict)
-        return("%s fetched from the Open Weather API... Caching it..." % response_dict["name"])
+            # Inserting into cache
+            living_cache, cache_dict = cache.Caching(all_responses_dict, cache_dict, response_dict["name"])
+
+            return("%s fetched from the Open Weather API... Caching it..." % response_dict["name"])
