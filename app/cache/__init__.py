@@ -2,6 +2,7 @@
 import sqlite3
 from sqlite3 import Error
 from flask import jsonify
+import os
 
 
 
@@ -9,10 +10,13 @@ class DatabaseManager(object):
 
     @classmethod
     def DatabaseConn(self):
-        path = 'C:\\Users\\Gabriel\\Desktop\\repository\\weather_forecast\\weather_forecast\\app\\cache\\weather_forecast_cache.sqlite'
+
+        cache_path = '\\app\\cache\\weather_forecast_cache.sqlite'
+        abs_path = os.path.abspath('') + cache_path
+        #print(abs_path)
         conn = None
         try:
-            conn = sqlite3.connect(path)
+            conn = sqlite3.connect(abs_path)
         except Error as er:
             print(er)
         return (conn)
@@ -27,20 +31,32 @@ class DatabaseManager(object):
 
 
 class Cache(object):
+    living_cache = []
+
+
+    @staticmethod
+    def GetCache():
+        global living_cache
+
+        return(living_cache)
+
+    @staticmethod
+    def SetCache(cached_data):
+        global living_cache
+        living_cache = cached_data
 
     @classmethod
     def __init__(self, response_dict):
         self.response_dict = response_dict
 
     @classmethod
-    def Caching(self, all_responses_dict, cache_dict, city_name):
+    def Caching(self, all_responses_dict):
         # Inserting into cache method
 
-
         all_responses_dict.append(self.response_dict)
-        cache_dict = dict(name = str(city_name), info = str(self.response_dict) )
 
-        return(all_responses_dict, cache_dict)
+
+        return(all_responses_dict)
 
 
     @classmethod
@@ -49,21 +65,3 @@ class Cache(object):
 
         all_responses_dict.clear()
         return(all_responses_dict)
-
-
-    @classmethod
-    def PrintCache(self,all_responses_dict):
-        # Printing cache method. It returns the current cache in json format
-        for i in all_responses_dict:
-            print(i)
-            print("\n")
-
-        return(jsonify(all_responses_dict))
-        #return(all_responses_dict)
-
-    @classmethod
-    def SearchCache(self,all_responses_dict,city_name):
-        if city_name in all_responses_dict:
-            return True
-        else:
-            return False

@@ -6,9 +6,8 @@ import requests, json
 import requests_cache
 import time
 
-five_minutes = 30     # 5 minutes = 300 seconds
+five_minutes = 300     # 5 minutes = 300 seconds
 
-cache_dict = {}
 all_responses_dict = []
 living_cache = []
 start_time = int(time.time())
@@ -18,22 +17,37 @@ end_time = start_time + five_minutes # 5 minutes after start time
 def index():
     return("WEATHER FORECAST")
 
+@app.route('/weather/max=', methods=['GET'], defaults = {'max_number': None})
 @app.route('/weather/max=<max_number>', methods=['GET'])
 # implementar a funcao
 def get_cities_max_number(max_number):
-    print(max_number)
-    return("Get all the cached cities, up to the latest n entries (configurable) or max_number (if specified)") #jsonify
+    global all_responses_dict
+    global response_dict
+    weather_return = []
 
 
+    cache = Cache(response_dict)
+    if not max_number or max_number == '0':
+        max_number = 5
+    try:
+        max_number_int = int(max_number)
+    except:
+        return("'Max number' is not valid")
+
+    living_cache = cache.GetCache()
+
+    lengh = len(living_cache)
+    if lengh < max_number_int:
+        max_number_int = lengh
+
+    for i in range(max_number_int):
+        weather_return.append(living_cache[lengh-i-1])
 
 
+    print("Get all the cached cities, up to the latest n entries (configurable) or max_number (if specified)")
+    return(jsonify(weather_return))
 
-
-
-
-
-
-
+#-----------------------------------------------------------------------------------------------------------------------------------
 
 @app.route('/weather/<city_name>', methods=['GET'])
 
@@ -43,10 +57,10 @@ def get_city_by_name(city_name):
     global all_responses_dict
     global living_cache
     global cache_dict
+    global response_dict
 
     ServiceConfig.get_city(city_name)
     COMPLETE_URL = ServiceConfig.generate_complete_url()
-
 
     #HTTP requests
     response, response_dict = ServiceConfig.generate_json_object(COMPLETE_URL)
@@ -72,33 +86,29 @@ def get_city_by_name(city_name):
 #------------------------------------------------------------------------------------------------------------------------------
 # TRYING WITH SQL
         #conn = DatabaseManager.DatabaseConn()
-
+        #conn.close()
 
         #sql = "SELECT value FROM responses"
         #query = DatabaseManager.Select(conn, sql)
 #------------------------------------------------------------------------------------------------------------------------------
+        # Cache lives for 5 minutes and then it is deleted
+        if (end_time <= int(time.time())):
+            start_time = end_time
+            end_time = start_time + five_minutes
+            living_cache = cache.DeleteCache(all_responses_dict)
+            cache.SetCache(living_cache)
 
+        #Checking if the city is cached
         if response.from_cache:
 
             #Returning and printing from Cache as json
             print("%s returned from cache" % response_dict["name"])
-
-            aux = cache.SearchCache(living_cache, response_dict["name"])
-            print(aux)
-            json_cache = cache.PrintCache(living_cache)
-            return(json_cache)
+            #json_cache = cache.PrintCache(living_cache)
+            return(jsonify(response_dict))
 
         else:
             print("%s fetched from the Open Weather API... Caching it..." % response_dict["name"])
-
-            # Cache lives for 5 minutes and then it is deleted
-            if (end_time <= int(time.time())):
-                #print("DELETING CACHE")
-                start_time = end_time
-                end_time = start_time + five_minutes
-                living_cache = cache.DeleteCache(all_responses_dict)
-
             # Inserting into cache
-            living_cache, cache_dict = cache.Caching(all_responses_dict, cache_dict, response_dict["name"])
-
-            return("%s fetched from the Open Weather API... Caching it..." % response_dict["name"])
+            living_cache = cache.Caching(all_responses_dict)
+            cache.SetCache(living_cache)
+            return(jsonify(response_dict))
